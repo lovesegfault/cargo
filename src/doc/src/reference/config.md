@@ -499,10 +499,15 @@ is relative to the parent directory of the `.cargo` directory that contains the
 `config.toml` file. The value of the environment variable will be the full
 absolute path.
 
+Normally, variables will not apply to third-party subcommands, such as when
+invoking `cargo flamegraph`. This can be opted in by setting the
+`in_subcommands` flag.
+
 ```toml
 [env]
 TMPDIR = { value = "/home/tmp", force = true }
 OPENSSL_DIR = { value = "vendor/openssl", relative = true }
+PATH = { value = "/bin/", force = true,  in_subcommands = true }
 ```
 
 ### `[future-incompat-report]`
