@@ -2357,6 +2357,8 @@ enum EnvConfigValueInner {
         force: bool,
         #[serde(default)]
         relative: bool,
+        #[serde(default)]
+        in_subcommands: bool,
     },
 }
 
@@ -2371,6 +2373,16 @@ impl EnvConfigValue {
         match self.inner.val {
             EnvConfigValueInner::Simple(_) => false,
             EnvConfigValueInner::WithOptions { force, .. } => force,
+        }
+    }
+
+    pub fn in_subcommands(&self) -> bool {
+        match self.inner.val {
+            // While having the default be to _not_ apply [env] items to subcommands is surprising,
+            // it is done for backwards compatibility, since it's the original behavior.
+            // c.f. https://github.com/rust-lang/cargo/issues/10094
+            EnvConfigValueInner::Simple(_) => false,
+            EnvConfigValueInner::WithOptions { in_subcommands, .. } => in_subcommands,
         }
     }
 

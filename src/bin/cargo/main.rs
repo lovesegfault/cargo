@@ -178,7 +178,7 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&str]) -> Cli
 
     // Apply [env] section to subcommands
     for (key, value) in config.env_config()?.iter() {
-        if util::config::config_env_applies(key, value)? {
+        if util::config::config_env_applies(key, value)? && value.in_subcommands() {
             cmd.env(key, value.resolve(config));
         }
     }
