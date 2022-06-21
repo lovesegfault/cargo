@@ -174,7 +174,16 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&str]) -> Cli
     };
 
     let cargo_exe = config.cargo_exe()?;
-    let err = match ProcessBuilder::new(&command)
+    let mut cmd = ProcessBuilder::new(&command);
+
+    // Apply [env] section to subcommands
+    for (key, value) in config.env_config()?.iter() {
+        if util::config::config_env_applies(key, value)? {
+            cmd.env(key, value.resolve(config));
+        }
+    }
+
+    let err = match cmd
         .env(cargo::CARGO_ENV, cargo_exe)
         .args(args)
         .exec_replace()
