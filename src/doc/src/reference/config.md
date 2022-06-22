@@ -510,6 +510,10 @@ OPENSSL_DIR = { value = "vendor/openssl", relative = true }
 PATH = { value = "/bin/", force = true,  in_subcommands = true }
 ```
 
+Note that setting `CARGO_` variables in `[env]` is not allowed and will result
+in a build error. Handling them is fraught, since it would require Cargo to
+recurse.
+
 ### `[future-incompat-report]`
 
 The `[future-incompat-report]` table controls setting for [future incompat reporting](future-incompat-report.md)
