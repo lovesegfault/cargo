@@ -213,11 +213,22 @@ fn is_executable<P: AsRef<Path>>(path: P) -> bool {
 }
 
 fn search_directories(config: &Config) -> Vec<PathBuf> {
-    let mut dirs = vec![config.home().clone().into_path_unlocked().join("bin")];
-    if let Some(val) = env::var_os("PATH") {
-        dirs.extend(env::split_paths(&val));
-    }
-    dirs
+    config
+        .env_config()
+        .ok()
+        .and_then(|env| env.get("PATH"))
+        // we only want PATH to override the default if it's forced and applies to subcommands
+        .filter(|path| path.is_force() && path.in_subcommands())
+        .map(|path| env::split_paths(&path.resolve(config)).collect())
+        // if there was no forced PATH in [env], we search CARGO_HOME/bin first, then the user's
+        // PATH
+        .unwrap_or_else(|| {
+            let mut dirs = vec![config.home().clone().into_path_unlocked().join("bin")];
+            if let Some(val) = env::var_os("PATH") {
+                dirs.extend(env::split_paths(&val));
+            }
+            dirs
+        })
 }
 
 fn init_git_transports(config: &Config) {
