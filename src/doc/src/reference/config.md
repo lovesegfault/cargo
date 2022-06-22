@@ -514,6 +514,24 @@ Note that setting `CARGO_` variables in `[env]` is not allowed and will result
 in a build error. Handling them is fraught, since it would require Cargo to
 recurse.
 
+Setting `PATH` in `[env]` _is_ allowed, but can lead to surprising behavior. For
+example, if you do:
+
+```toml
+[env]
+PATH = { value = "/opt/my-rust/bin", force = true, in_subcommands = true }
+```
+And you had globally-installed tools in `$CARGO_HOME/bin`, such as
+`cargo-flamegraph`, they will no longer work:
+
+```console
+$ cargo flamegraph
+error: no such subcommand: `flamegraph`
+```
+
+You can resolve this by either setting `in_subcommands = false`, or by adding
+the tool to the `PATH` value.
+
 ### `[future-incompat-report]`
 
 The `[future-incompat-report]` table controls setting for [future incompat reporting](future-incompat-report.md)
