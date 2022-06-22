@@ -1,6 +1,6 @@
 //! Tests for `[env]` config.
 
-use cargo_test_support::{basic_bin_manifest, project};
+use cargo_test_support::{basic_bin_manifest, project, ProjectBuilder};
 
 #[cargo_test]
 fn env_basic() {
@@ -215,4 +215,94 @@ fn env_build_script() {
         .build();
 
     p.cargo("build").run();
+}
+
+fn env_path_helper(check: fn(ProjectBuilder)) {
+    let pb = project()
+        .file("Cargo.toml", &basic_bin_manifest("cargo-fake-subcommand"))
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {
+                    println!("I'm a fake subcommand!");
+                }
+                "#,
+        );
+    check(pb);
+}
+
+#[cargo_test]
+fn env_path_basic() {
+    env_path_helper(|pb| {
+        let p = pb
+            .file(
+                ".cargo/config",
+                r#"
+                [env]
+                PATH = "/idontexist"
+            "#,
+            )
+            .build();
+        p.cargo("install --path .").run();
+        p.cargo("fake-subcommand")
+            .with_stdout("I'm a fake subcommand!")
+            .run();
+    });
+}
+
+#[cargo_test]
+fn env_path_force() {
+    env_path_helper(|pb| {
+        let p = pb.build();
+        p.cargo("install --path .").run();
+        p.cargo("fake-subcommand")
+            .with_stdout("I'm a fake subcommand!")
+            .run();
+        p.change_file(
+            ".cargo/config",
+            r#"
+                [env]
+                PATH = { value = "/idontexist", force = true }
+            "#,
+        );
+        p.cargo("clean").run();
+        // should still work because in_subcommands is not set
+        p.cargo("fake-subcommand")
+            .with_stdout("I'm a fake subcommand!")
+            .run();
+        // should fail because there is no rustc in PATH now
+        p.cargo("install --path .")
+            .with_status(101)
+            .with_stderr_contains("[ERROR] could not compile `cargo-fake-subcommand`")
+            .run();
+    });
+}
+
+#[cargo_test]
+fn env_path_force_in_subcommands() {
+    env_path_helper(|pb| {
+        let p = pb.build();
+        p.cargo("install --path .").run();
+        p.cargo("fake-subcommand")
+            .with_stdout("I'm a fake subcommand!")
+            .run();
+        p.change_file(
+            ".cargo/config",
+            r#"
+                [env]
+                PATH = { value = "/idontexist", force = true, in_subcommands = true }
+            "#,
+        );
+        p.cargo("clean").run();
+        // should fail because there is no cargo-fake-subcommand in PATH
+        p.cargo("fake-subcommand")
+            .with_status(101)
+            .with_stderr_contains("[ERROR] no such subcommand: `fake-subcommand`")
+            .run();
+        // should fail because there is no rustc in PATH now
+        p.cargo("install --path .")
+            .with_status(101)
+            .with_stderr_contains("[ERROR] could not compile `cargo-fake-subcommand`")
+            .run();
+    });
 }
